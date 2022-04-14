@@ -8,7 +8,7 @@ import binascii
 # Should use stdev
 
 ICMP_ECHO_REQUEST = 8
-
+ICMP_ECHO_REPLY= 0
 
 def checksum(string):
     csum = 0
@@ -48,8 +48,19 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         recPacket, addr = mySocket.recvfrom(1024)
 
         # Fill in start
-
+        print(type(recPacket))
+        print(recPacket)
+        print(addr)
+        print(str(timeReceived))
         # Fetch the ICMP header from the IP packet
+        icmpHeader = recPacket[20:28]
+        ty, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
+        print(struct.unpack("bbHHh", icmpHeader))
+        if(code==ICMP_ECHO_REPLY):
+            print("Ping Found")
+            return 
+
+
 
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
@@ -67,7 +78,8 @@ def sendOnePing(mySocket, destAddr, ID):
     data = struct.pack("d", time.time())
     # Calculate the checksum on the data and the dummy header.
     myChecksum = checksum(header + data)
-
+    # print(myChecksum)
+    # print("Above Checksum from the sendOnePing")
     # Get the right checksum, and put in the header
 
     if sys.platform == 'darwin':
@@ -78,6 +90,7 @@ def sendOnePing(mySocket, destAddr, ID):
 
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
+    #print(struct.unpack("bbHHh",header))
     packet = header + data
 
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
@@ -103,7 +116,11 @@ def doOnePing(destAddr, timeout):
 def ping(host, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,  	
     # the client assumes that either the client's ping or the server's pong is lost
-    dest = gethostbyname(host)
+    try:
+        dest = gethostbyname(host)
+    except:
+        print("Host Not Found")
+        return ['0', '0.0', '0', '0.0']
     print("Pinging " + dest + " using Python:")
     print("")
     
@@ -121,4 +138,8 @@ def ping(host, timeout=1):
     return vars
 
 if __name__ == '__main__':
-    ping("google.co.il")
+    test=["10.90.0.90","No.no.e","google.co.il","127.0.0.1"]
+    
+    #ping(test[1])#ping()#ping("google.co.il")
+    for ip in test:
+        ping(ip)
