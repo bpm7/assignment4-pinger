@@ -6,7 +6,7 @@ import time
 import select
 import binascii
 # Should use stdev
-
+from statistics import stdev
 ICMP_ECHO_REQUEST = 8
 ICMP_ECHO_REPLY= 0
 
@@ -36,6 +36,7 @@ def checksum(string):
 
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
+    timeSent=time.time()
 
     while 1:
         startedSelect = time.time()
@@ -48,19 +49,20 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         recPacket, addr = mySocket.recvfrom(1024)
 
         # Fill in start
+        """
+        
         print(type(recPacket))
         print(recPacket)
         print(addr)
         print(str(timeReceived))
+        """
         # Fetch the ICMP header from the IP packet
         icmpHeader = recPacket[20:28]
         ty, code, checksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
-        print(struct.unpack("bbHHh", icmpHeader))
+        #print(struct.unpack("bbHHh", icmpHeader))
         if(code==ICMP_ECHO_REPLY):
-            print("Ping Found")
-            return 
-
-
+            #print("Ping Found")
+            return timeReceived- timeSent
 
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
@@ -119,27 +121,37 @@ def ping(host, timeout=1):
     try:
         dest = gethostbyname(host)
     except:
-        print("Host Not Found")
+        #print("Host Not Found")
         return ['0', '0.0', '0', '0.0']
     print("Pinging " + dest + " using Python:")
     print("")
     
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    
+    packetDelays=list()
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay = doOnePing(dest, timeout)
         print(delay)
+        packetDelays.append(delay)
         time.sleep(1)  # one second
-        
+    if(type(packetDelays[0]) ==str or packetDelays[0] is None):
+        #print("Time outs")
+        return ['0', '0.0', '0', '0.0']
     #You should have the values of delay for each ping here; fill in calculation for packet_min, packet_avg, packet_max, and stdev
-    #vars = [str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)),str(round(stdev(stdev_var), 8))]
+    packet_min= min(packetDelays)
+    packet_max= max(packetDelays)
+    packet_avg=sum(packetDelays)/len(packetDelays)
+    stdev_var= stdev(packetDelays)
+    #print("Calculating")
+    vars = [str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)),str(round(stdev_var, 8))]
 
+    #vars = [str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)),str(round(stdev(stdev_var), 8))]
+    #print(vars)
     return vars
 
 if __name__ == '__main__':
     test=["10.90.0.90","No.no.e","google.co.il","127.0.0.1"]
-    
+    #test=["127.0.0.1","No.no.e"]
     #ping(test[1])#ping()#ping("google.co.il")
     for ip in test:
         ping(ip)
